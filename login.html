@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş - Danışan Takip Sistemi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-logo-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        .login-logo h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .login-logo p {
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .login-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-logo">
+            <div class="login-logo-icon">🏥</div>
+            <h1>Danışan Takip</h1>
+            <p>Fizyoterapi & Pilates & Yoga</p>
+        </div>
+
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="showTab('login')">Giriş Yap</button>
+            <button class="tab-btn" onclick="showTab('register')">Kayıt Ol</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginTab" class="tab-content active">
+            <div class="form-group">
+                <label>E-posta</label>
+                <input type="email" id="loginEmail" placeholder="ornek@email.com">
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" onclick="login()">🔐 Giriş Yap</button>
+            <button class="btn btn-secondary" onclick="guestLogin()">👤 Misafir Olarak Devam Et</button>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerTab" class="tab-content">
+            <div class="form-group">
+                <label>İşletme Adı</label>
+                <input type="text" id="registerName" placeholder="Örn: Sağlık Fizyoterapi">
+            </div>
+            <div class="form-group">
+                <label>E-posta</label>
+                <input type="email" id="registerEmail" placeholder="ornek@email.com">
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" id="registerPassword" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>Şifre Tekrar</label>
+                <input type="password" id="registerPasswordConfirm" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" onclick="register()">✓ Kayıt Ol</button>
+        </div>
+
+        <div class="login-footer">
+            <p>Verileriniz güvenli bir şekilde saklanır</p>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'login') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('loginTab').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('registerTab').classList.add('active');
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                alert('Lütfen e-posta ve şifre girin!');
+                return;
+            }
+
+            try {
+                const userKey = 'user-' + btoa(email);
+                const userData = await window.storage.get(userKey);
+                
+                if (userData) {
+                    const user = JSON.parse(userData.value);
+                    if (user.password === btoa(password)) {
+                        await window.storage.set('current-user', JSON.stringify(user));
+                        window.location.href = 'index.html';
+                    } else {
+                        alert('Şifre hatalı!');
+                    }
+                } else {
+                    alert('Kullanıcı bulunamadı! Lütfen kayıt olun.');
+                }
+            } catch (error) {
+                alert('Kullanıcı bulunamadı! Lütfen kayıt olun.');
+            }
+        }
+
+        async function register() {
+            const name = document.getElementById('registerName').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+
+            if (!name || !email || !password) {
+                alert('Lütfen tüm alanları doldurun!');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                alert('Şifreler eşleşmiyor!');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('Şifre en az 6 karakter olmalıdır!');
+                return;
+            }
+
+            const userKey = 'user-' + btoa(email);
+            
+            try {
+                const existingUser = await window.storage.get(userKey);
+                if (existingUser) {
+                    alert('Bu e-posta adresi zaten kayıtlı!');
+                    return;
+                }
+            } catch (error) {
+                // User doesn't exist, continue
+            }
+
+            const newUser = {
+                name: name,
+                email: email,
+                password: btoa(password),
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                await window.storage.set(userKey, JSON.stringify(newUser));
+                await window.storage.set('current-user', JSON.stringify(newUser));
+                alert('Kayıt başarılı! Yönlendiriliyorsunuz...');
+                window.location.href = 'index.html';
+            } catch (error) {
+                alert('Kayıt sırasında hata oluştu!');
+            }
+        }
+
+        function guestLogin() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
