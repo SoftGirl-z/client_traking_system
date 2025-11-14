@@ -966,6 +966,447 @@
                 width: 100%;
             }
         }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group select {
+            padding: 10px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Package Styles */
+        .package-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .package-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .package-expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .payment-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .payment-paid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .payment-debt {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .package-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .package-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .package-progress {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .package-progress-bar {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.3s;
+        }
+
+        .package-progress-bar.warning {
+            background: #f59e0b;
+        }
+
+        .package-progress-bar.danger {
+            background: #ef4444;
+        }
+
+        /* Payment Styles */
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background 0.3s;
+        }
+
+        .payment-item:hover {
+            background: #f9fafb;
+        }
+
+        .payment-date {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Finance Cards */
+        .finance-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .finance-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .finance-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .finance-card .amount {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .finance-card.income .amount {
+            color: #10b981;
+        }
+
+        .finance-card.debt .amount {
+            color: #ef4444;
+        }
+
+        .payment-list {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        /* Calendar Styles */
+        .calendar-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: white;
+        }
+
+        .calendar-stat {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .calendar-stat h4 {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .calendar-stat .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .calendar-legend {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: white;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .calendar-day {
+            background: white;
+            min-height: 100px;
+            padding: 8px;
+            border: 1px solid #e5e7eb;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .calendar-day.other-month {
+            background: #f9fafb;
+            opacity: 0.5;
+        }
+
+        .calendar-day.today {
+            background: #fff7ed;
+            border-color: #f59e0b;
+        }
+
+        .calendar-day.drag-over {
+            background: #e0e7ff;
+            border-color: #667eea;
+        }
+
+        .day-number {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .today-indicator {
+            display: block;
+            font-size: 9px;
+            color: #f59e0b;
+            margin-top: 2px;
+        }
+
+        .calendar-event {
+            background: #667eea;
+            color: white;
+            padding: 4px 6px;
+            margin: 2px 0;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .calendar-event:hover {
+            transform: scale(1.05);
+        }
+
+        .calendar-event.physio {
+            background: #667eea;
+        }
+
+        .calendar-event.pilates {
+            background: #10b981;
+        }
+
+        .calendar-event.yoga {
+            background: #8b5cf6;
+        }
+
+        .calendar-time-slot {
+            min-height: 60px;
+            position: relative;
+        }
+
+        .time-event {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        /* Sessions Summary */
+        .sessions-summary {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            margin-top: 30px;
+        }
+
+        .sessions-summary-header {
+            padding: 20px;
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .sessions-summary-content {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .session-day-group {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .session-day-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        /* Reports */
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bar-label {
+            min-width: 80px;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .bar-background {
+            flex: 1;
+            background: #e5e7eb;
+            height: 30px;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            transition: width 0.3s;
+            min-width: fit-content;
+        }
+
+        .top-client-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background 0.3s;
+        }
+
+        .top-client-item:hover {
+            background: #f9fafb;
+        }
+
+        .top-client-rank {
+            width: 32px;
+            height: 32px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .filter-group {
+                flex-direction: column;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+
+            .reports-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
@@ -987,8 +1428,11 @@
                 <button class="btn btn-success" onclick="openAddSessionModal()">
                     ➕ Yeni Seans
                 </button>
-                <button class="btn btn-success" onclick="openAddSessionModal()">
+                <button class="btn btn-success" onclick="openAddPackageModal()">
                     ➕ Paket Ekle
+                </button>
+                <button class="btn" style="background: #059669; color: white;" onclick="exportToExcel()">
+                    📊 Excel'e Aktar
                 </button>
             </div>
         </div>
@@ -2064,14 +2508,171 @@
         function updateStats() {
             document.getElementById('totalClients').textContent = clients.length;
             document.getElementById('totalSessions').textContent = sessions.length;
-            
+
             const now = new Date();
             const thisMonth = sessions.filter(s => {
                 const sessionDate = new Date(s.date);
-                return sessionDate.getMonth() === now.getMonth() && 
+                return sessionDate.getMonth() === now.getMonth() &&
                        sessionDate.getFullYear() === now.getFullYear();
             }).length;
             document.getElementById('thisMonthSessions').textContent = thisMonth;
+        }
+
+        // Excel Export Functions
+        function exportToExcel() {
+            const exportOptions = `
+                <div style="padding: 20px;">
+                    <h3 style="margin-bottom: 20px;">Hangi verileri dışa aktarmak istersiniz?</h3>
+                    <button class="btn btn-primary" onclick="exportClientsToCSV()" style="width: 100%; margin-bottom: 10px;">
+                        👥 Danışanlar Listesi
+                    </button>
+                    <button class="btn btn-success" onclick="exportSessionsToCSV()" style="width: 100%; margin-bottom: 10px;">
+                        📅 Seanslar Listesi
+                    </button>
+                    <button class="btn" style="background: #667eea; color: white; width: 100%; margin-bottom: 10px;" onclick="exportPackagesToCSV()">
+                        📦 Paketler ve Ödemeler
+                    </button>
+                    <button class="btn" style="background: #8b5cf6; color: white; width: 100%;" onclick="exportFullReport()">
+                        📊 Tam Rapor (Tümü)
+                    </button>
+                </div>
+            `;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3>Veri Dışa Aktarma</h3>
+                        <button class="close-btn" onclick="this.closest('.modal').remove()">✕</button>
+                    </div>
+                    ${exportOptions}
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.onclick = function(e) {
+                if (e.target === modal) modal.remove();
+            };
+        }
+
+        function exportClientsToCSV() {
+            const csvContent = [
+                ['Ad Soyad', 'Telefon', 'E-posta', 'Doğum Tarihi', 'Toplam Seans', 'Şikayetler', 'Notlar', 'Kayıt Tarihi'].join(','),
+                ...clients.map(c => [
+                    c.name,
+                    c.phone,
+                    c.email || '',
+                    c.birthDate || '',
+                    c.totalSessions || 0,
+                    (c.complaints || '').replace(/,/g, ' '),
+                    (c.notes || '').replace(/,/g, ' '),
+                    new Date(c.createdAt).toLocaleDateString('tr-TR')
+                ].join(','))
+            ].join('\n');
+
+            downloadCSV(csvContent, 'danisanlar.csv');
+            document.querySelector('.modal.active').remove();
+        }
+
+        function exportSessionsToCSV() {
+            const csvContent = [
+                ['Danışan', 'Tarih', 'Saat', 'Tür', 'Süre (dk)', 'Şikayet', 'Tedavi', 'Egzersizler', 'Kayıt Tarihi'].join(','),
+                ...sessions.map(s => {
+                    const client = clients.find(c => c.id === s.clientId);
+                    return [
+                        client ? client.name : 'Bilinmeyen',
+                        s.date,
+                        s.time || '',
+                        s.type,
+                        s.duration || '60',
+                        (s.complaints || '').replace(/,/g, ' '),
+                        (s.treatment || '').replace(/,/g, ' '),
+                        (s.exercises || '').replace(/,/g, ' '),
+                        new Date(s.createdAt).toLocaleDateString('tr-TR')
+                    ].join(',');
+                })
+            ].join('\n');
+
+            downloadCSV(csvContent, 'seanslar.csv');
+            document.querySelector('.modal.active').remove();
+        }
+
+        function exportPackagesToCSV() {
+            const csvContent = [
+                ['Danışan', 'Paket Adı', 'Toplam Seans', 'Kalan Seans', 'Fiyat', 'Ödenen', 'Kalan Borç', 'Durum', 'Başlangıç Tarihi'].join(','),
+                ...packages.map(p => {
+                    const client = clients.find(c => c.id === p.clientId);
+                    return [
+                        client ? client.name : 'Bilinmeyen',
+                        p.name,
+                        p.totalSessions,
+                        p.remainingSessions,
+                        p.price.toFixed(2) + ' ₺',
+                        p.paidAmount.toFixed(2) + ' ₺',
+                        (p.price - p.paidAmount).toFixed(2) + ' ₺',
+                        p.status === 'active' ? 'Aktif' : 'Tamamlandı',
+                        new Date(p.startDate).toLocaleDateString('tr-TR')
+                    ].join(',');
+                })
+            ].join('\n');
+
+            downloadCSV(csvContent, 'paketler.csv');
+            document.querySelector('.modal.active').remove();
+        }
+
+        function exportFullReport() {
+            const now = new Date();
+            const reportContent = [
+                '=== DANIŞAN TAKİP SİSTEMİ - TAM RAPOR ===',
+                `Rapor Tarihi: ${now.toLocaleDateString('tr-TR')} ${now.toLocaleTimeString('tr-TR')}`,
+                '',
+                '--- GENEL İSTATİSTİKLER ---',
+                `Toplam Danışan: ${clients.length}`,
+                `Toplam Seans: ${sessions.length}`,
+                `Aktif Paket: ${packages.filter(p => p.status === 'active').length}`,
+                `Toplam Gelir: ${payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)} ₺`,
+                `Bekleyen Borç: ${packages.reduce((sum, p) => sum + (p.price - p.paidAmount), 0).toFixed(2)} ₺`,
+                '',
+                '--- DANIŞANLAR ---',
+                'Ad Soyad,Telefon,E-posta,Toplam Seans,Durum',
+                ...clients.map(c => {
+                    const activePackage = packages.find(p => p.clientId === c.id && p.status === 'active');
+                    return `${c.name},${c.phone},${c.email || ''},${c.totalSessions || 0},${activePackage ? 'Aktif Paketli' : 'Paketsiz'}`;
+                }),
+                '',
+                '--- SON 50 SEANS ---',
+                'Danışan,Tarih,Tür,Süre',
+                ...sessions.slice(-50).map(s => {
+                    const client = clients.find(c => c.id === s.clientId);
+                    return `${client ? client.name : 'Bilinmeyen'},${s.date},${s.type},${s.duration || 60} dk`;
+                }),
+                '',
+                '--- AKTİF PAKETLER ---',
+                'Danışan,Paket,Kalan Seans,Kalan Borç',
+                ...packages.filter(p => p.status === 'active').map(p => {
+                    const client = clients.find(c => c.id === p.clientId);
+                    return `${client ? client.name : 'Bilinmeyen'},${p.name},${p.remainingSessions}/${p.totalSessions},${(p.price - p.paidAmount).toFixed(2)} ₺`;
+                })
+            ].join('\n');
+
+            downloadCSV(reportContent, `tam_rapor_${now.toISOString().split('T')[0]}.csv`);
+            document.querySelector('.modal.active').remove();
+        }
+
+        function downloadCSV(content, filename) {
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            alert(`✓ ${filename} başarıyla indirildi!`);
         }
 
         function switchTab(tab) {
