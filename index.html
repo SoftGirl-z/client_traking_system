@@ -12,7 +12,7 @@
         <div class="header">
             <div class="header-top">
                 <div>
-                    <h1>🏥 Danışan Takip Sistemi</h1>
+                    <h1>🥼 Danışan Takip Sistemi</h1>
                     <p>Fizyoterapi & Pilates & Yoga</p>
                 </div>
                 <div class="auth-buttons">
@@ -183,7 +183,7 @@
                 </div>
                 <div class="form-group">
                     <label>Telefon *</label>
-                    <input type="tel" id="clientPhone" required>
+                    <input type="tel" id="clientPhone" placeholder="5XX XXX XX XX" required>
                 </div>
                 <div class="form-group">
                     <label>E-posta</label>
@@ -191,11 +191,11 @@
                 </div>
                 <div class="form-group">
                     <label>Şikayetler</label>
-                    <textarea id="clientComplaints"></textarea>
+                    <textarea id="clientComplaints" rows="3"></textarea>
                 </div>
                 <div class="form-group">
                     <label>Notlar</label>
-                    <textarea id="clientNotes"></textarea>
+                    <textarea id="clientNotes" rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -227,18 +227,24 @@
                         <input type="time" id="sessionTime" value="09:00" required>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Seans Türü *</label>
-                    <select id="sessionType">
-                        <option>Fizyoterapi</option>
-                        <option>Reformer Pilates</option>
-                        <option>Yoga</option>
-                        <option>Mat Pilates</option>
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Seans Türü *</label>
+                        <select id="sessionType">
+                            <option>Fizyoterapi</option>
+                            <option>Reformer Pilates</option>
+                            <option>Yoga</option>
+                            <option>Mat Pilates</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Seans Süresi (dakika)</label>
+                        <input type="number" id="sessionDuration" value="60" min="15" step="15">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Notlar</label>
-                    <textarea id="sessionNotes"></textarea>
+                    <textarea id="sessionNotes" rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -301,6 +307,11 @@
             </div>
             <div class="modal-body">
                 <div id="paymentPackageInfo" style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-bottom: 20px;"></div>
+                
+                <!-- Gizli alanlar -->
+                <input type="hidden" id="paymentPackage">
+                <input type="hidden" id="paymentClient">
+                
                 <div class="form-group">
                     <label>Ödeme Tutarı (₺) *</label>
                     <input type="number" id="paymentAmount" step="0.01" placeholder="0.00" required>
@@ -315,6 +326,7 @@
                         <option>Nakit</option>
                         <option>Kredi Kartı</option>
                         <option>Banka Transferi</option>
+                        <option>Dijital Cüzdan</option>
                     </select>
                 </div>
             </div>
@@ -325,6 +337,12 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module">
+        import './storage-manager.js';
+        import './firebase-config.js';
+        import './notifications.js';
+        import './export.js';
+        import './app.js';
+    </script>
 </body>
 </html>

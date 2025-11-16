@@ -17,13 +17,13 @@ class StorageManager {
             const request = indexedDB.open(this.dbName, this.dbVersion);
             
             request.onerror = () => {
-                console.error('IndexedDB açılamadı:', request.error);
+                console.error('❌ IndexedDB açılamadı:', request.error);
                 reject(request.error);
             };
             
             request.onsuccess = () => {
                 this.db = request.result;
-                console.log('✓ IndexedDB başarıyla başlatıldı');
+                console.log('✅ IndexedDB başarıyla başlatıldı');
                 resolve(this.db);
             };
             
@@ -71,7 +71,7 @@ class StorageManager {
                     userStore.createIndex('email', 'email', { unique: true });
                 }
 
-                console.log('✓ Veritabanı şeması oluşturuldu');
+                console.log('✅ Veritabanı şeması oluşturuldu');
             };
         });
     }
@@ -97,12 +97,12 @@ class StorageManager {
                 const request = store.add(data);
                 
                 request.onsuccess = () => {
-                    console.log(`✓ ${storeName} eklendi:`, data.id);
+                    console.log(`✅ ${storeName} eklendi:`, data.id);
                     resolve(data);
                 };
                 
                 request.onerror = () => {
-                    console.error(`✗ ${storeName} eklenemedi:`, request.error);
+                    console.error(`❌ ${storeName} ekleme hatası:`, request.error);
                     reject(request.error);
                 };
             } catch (error) {
@@ -121,16 +121,14 @@ class StorageManager {
                 const store = tx.objectStore(storeName);
                 
                 data.updatedAt = new Date().toISOString();
-                
                 const request = store.put(data);
                 
                 request.onsuccess = () => {
-                    console.log(`✓ ${storeName} güncellendi:`, data.id);
+                    console.log(`✅ ${storeName} güncellendi:`, data.id);
                     resolve(data);
                 };
                 
                 request.onerror = () => {
-                    console.error(`✗ ${storeName} güncellenemedi:`, request.error);
                     reject(request.error);
                 };
             } catch (error) {
@@ -139,25 +137,86 @@ class StorageManager {
         });
     }
 
-    // Tek veri getirme
-    async get(storeName, id) {
-        if (!this.db) await this.init();
-        
+    // Veri getirme - JSON key:value şeklinde (LocalStorage uyumlu)
+    async get(key) {
         return new Promise((resolve, reject) => {
             try {
-                const tx = this.db.transaction(storeName, 'readonly');
-                const store = tx.objectStore(storeName);
-                const request = store.get(id);
-                
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+                // Önce localStorage'den dene (hızlı)
+                const localData = localStorage.getItem(key);
+                if (localData) {
+                    console.log(`✅ LocalStorage'den yüklendi: ${key}`);
+                    resolve({ value: localData });
+                    return;
+                }
+
+                // Yoksa IndexedDB'de ara
+                if (!this.db) {
+                    resolve(null);
+                    return;
+                }
+
+                const tx = this.db.transaction(['clients', 'sessions', 'packages', 'payments'], 'readonly');
+                let found = false;
+
+                ['clients', 'sessions', 'packages', 'payments'].forEach(storeName => {
+                    const store = tx.objectStore(storeName);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => {
+                        const data = request.result;
+                        if (data && data.length > 0 && !found) {
+                            // Tüm veriyi birleştir
+                            console.log(`✅ IndexedDB'den yüklendi: ${key}`);
+                            resolve({ value: JSON.stringify(data) });
+                            found = true;
+                        }
+                    };
+                });
+
+                // 500ms sonra hala bulunamadıysa null dön
+                setTimeout(() => {
+                    if (!found) {
+                        console.log(`⚠️ Veri bulunamadı: ${key}`);
+                        resolve(null);
+                    }
+                }, 500);
             } catch (error) {
-                reject(error);
+                console.error('Storage get hatası:', error);
+                resolve(null);
             }
         });
     }
 
-    // Tüm verileri getirme
+    // Veri kaydetme - JSON key:value şeklinde (LocalStorage uyumlu)
+    async set(key, value) {
+        try {
+            // Önce localStorage'e kaydet (hızlı)
+            localStorage.setItem(key, value);
+            console.log(`✅ LocalStorage'a kaydedildi: ${key}`);
+            
+            // İsteğe bağlı: IndexedDB'ye de kaydet (yedekleme için)
+            // Bu kısım isteğe bağlı - hız için skip edilebilir
+            
+            return true;
+        } catch (error) {
+            console.error('Storage set hatası:', error);
+            return false;
+        }
+    }
+
+    // Veri silme
+    async delete(key) {
+        try {
+            localStorage.removeItem(key);
+            console.log(`✅ LocalStorage'dan silindi: ${key}`);
+            return true;
+        } catch (error) {
+            console.error('Storage delete hatası:', error);
+            return false;
+        }
+    }
+
+    // İtibaren veri getir
     async getAll(storeName) {
         if (!this.db) await this.init();
         
@@ -169,24 +228,18 @@ class StorageManager {
                 const userId = this.getUserId();
                 
                 const request = index.getAll(userId);
-                
                 request.onsuccess = () => {
-                    console.log(`✓ ${storeName} verileri alındı:`, request.result.length);
                     resolve(request.result);
                 };
-                
-                request.onerror = () => {
-                    console.error(`✗ ${storeName} verileri alınamadı:`, request.error);
-                    reject(request.error);
-                };
+                request.onerror = () => reject(request.error);
             } catch (error) {
                 reject(error);
             }
         });
     }
 
-    // Veri silme
-    async delete(storeName, id) {
+    // Belirli bir veriyi ID'sinden sil
+    async deleteById(storeName, id) {
         if (!this.db) await this.init();
         
         return new Promise((resolve, reject) => {
@@ -196,60 +249,39 @@ class StorageManager {
                 const request = store.delete(id);
                 
                 request.onsuccess = () => {
-                    console.log(`✓ ${storeName} silindi:`, id);
-                    resolve(true);
+                    console.log(`✅ ${storeName} silindi:`, id);
+                    resolve();
                 };
-                
-                request.onerror = () => {
-                    console.error(`✗ ${storeName} silinemedi:`, request.error);
-                    reject(request.error);
-                };
+                request.onerror = () => reject(request.error);
             } catch (error) {
                 reject(error);
             }
         });
     }
 
-    // Gelişmiş arama
-    async search(storeName, searchParams) {
+    // Arama
+    async search(storeName, indexName, query) {
         if (!this.db) await this.init();
         
         return new Promise((resolve, reject) => {
             try {
                 const tx = this.db.transaction(storeName, 'readonly');
                 const store = tx.objectStore(storeName);
-                const index = store.index('userId');
-                const userId = this.getUserId();
-                
-                const request = index.openCursor(userId);
+                const index = store.index(indexName);
+                const request = index.openCursor();
                 const results = [];
                 
                 request.onsuccess = (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
-                        const item = cursor.value;
-                        let matches = true;
-                        
-                        // Tüm arama parametrelerini kontrol et
-                        for (const [key, value] of Object.entries(searchParams)) {
-                            if (item[key] && typeof item[key] === 'string') {
-                                if (!item[key].toLowerCase().includes(value.toLowerCase())) {
-                                    matches = false;
-                                    break;
-                                }
-                            } else if (item[key] !== value) {
-                                matches = false;
-                                break;
-                            }
+                        if (String(cursor.value[indexName]).toLowerCase().includes(query.toLowerCase())) {
+                            results.push(cursor.value);
                         }
-                        
-                        if (matches) results.push(item);
                         cursor.continue();
                     } else {
                         resolve(results);
                     }
                 };
-                
                 request.onerror = () => reject(request.error);
             } catch (error) {
                 reject(error);
@@ -260,14 +292,17 @@ class StorageManager {
     // Yedekleme (Export)
     async exportData() {
         try {
+            const clients = await this.getAll('clients');
+            const sessions = await this.getAll('sessions');
+            const packages = await this.getAll('packages');
+            const payments = await this.getAll('payments');
+            
             const data = {
-                version: this.dbVersion,
-                exportDate: new Date().toISOString(),
-                userId: this.getUserId(),
-                clients: await this.getAll('clients'),
-                sessions: await this.getAll('sessions'),
-                packages: await this.getAll('packages'),
-                payments: await this.getAll('payments')
+                clients,
+                sessions,
+                packages,
+                payments,
+                exportDate: new Date().toISOString()
             };
             
             const blob = new Blob([JSON.stringify(data, null, 2)], 
@@ -275,18 +310,14 @@ class StorageManager {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `physio-backup-${Date.now()}.json`;
-            document.body.appendChild(a);
+            a.download = `physio-backup-${new Date().toISOString().split('T')[0]}.json`;
             a.click();
-            document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            showNotification('Veriler başarıyla dışa aktarıldı!', 'success');
-            return true;
+            return data;
         } catch (error) {
-            console.error('Dışa aktarma hatası:', error);
-            showNotification('Dışa aktarma sırasında hata oluştu!', 'error');
-            return false;
+            console.error('Export hatası:', error);
+            throw error;
         }
     }
 
@@ -294,101 +325,67 @@ class StorageManager {
     async importData(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            
             reader.onload = async (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
                     
-                    // Veri doğrulama
-                    if (!data.version || !data.clients) {
-                        throw new Error('Geçersiz yedekleme dosyası');
-                    }
-                    
-                    // Mevcut verileri temizle (opsiyonel)
-                    const clearFirst = confirm('Mevcut verileri silmek ister misiniz? (Hayır seçerseniz veriler birleştirilir)');
-                    
-                    if (clearFirst) {
-                        await this.clearAllData();
-                    }
-                    
-                    // Verileri içe aktar
-                    let imported = 0;
-                    
-                    for (const client of data.clients || []) {
-                        try {
+                    // Verileri iç e aktar
+                    if (data.clients) {
+                        for (const client of data.clients) {
                             await this.add('clients', client);
-                            imported++;
-                        } catch (e) {
-                            console.warn('Müşteri atlandı:', client.id);
                         }
                     }
-                    
-                    for (const session of data.sessions || []) {
-                        try {
+                    if (data.sessions) {
+                        for (const session of data.sessions) {
                             await this.add('sessions', session);
-                            imported++;
-                        } catch (e) {
-                            console.warn('Seans atlandı:', session.id);
                         }
                     }
-                    
-                    for (const pkg of data.packages || []) {
-                        try {
+                    if (data.packages) {
+                        for (const pkg of data.packages) {
                             await this.add('packages', pkg);
-                            imported++;
-                        } catch (e) {
-                            console.warn('Paket atlandı:', pkg.id);
                         }
                     }
-                    
-                    for (const payment of data.payments || []) {
-                        try {
+                    if (data.payments) {
+                        for (const payment of data.payments) {
                             await this.add('payments', payment);
-                            imported++;
-                        } catch (e) {
-                            console.warn('Ödeme atlandı:', payment.id);
                         }
                     }
                     
-                    showNotification(`${imported} kayıt başarıyla içe aktarıldı!`, 'success');
-                    resolve(imported);
+                    resolve();
                 } catch (error) {
-                    console.error('İçe aktarma hatası:', error);
-                    showNotification('İçe aktarma sırasında hata oluştu!', 'error');
                     reject(error);
                 }
             };
-            
             reader.onerror = () => reject(reader.error);
             reader.readAsText(file);
         });
     }
 
-    // Tüm verileri temizle
-    async clearAllData() {
-        const stores = ['clients', 'sessions', 'packages', 'payments'];
-        
-        for (const storeName of stores) {
-            const items = await this.getAll(storeName);
-            for (const item of items) {
-                await this.delete(storeName, item.id);
-            }
-        }
-        
-        console.log('✓ Tüm veriler temizlendi');
-    }
-
-    // Veritabanı istatistikleri
+    // İstatistikler
     async getStats() {
-        const stats = {
-            clients: (await this.getAll('clients')).length,
-            sessions: (await this.getAll('sessions')).length,
-            packages: (await this.getAll('packages')).length,
-            payments: (await this.getAll('payments')).length,
-            totalSize: await this.estimateSize()
-        };
-        
-        return stats;
+        try {
+            const clients = await this.getAll('clients');
+            const sessions = await this.getAll('sessions');
+            const packages = await this.getAll('packages');
+            const payments = await this.getAll('payments');
+            
+            const totalIncome = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+            const totalDebt = packages.reduce((sum, p) => sum + ((p.price || 0) - (p.paidAmount || 0)), 0);
+            
+            const stats = {
+                totalClients: clients.length,
+                totalSessions: sessions.length,
+                totalPackages: packages.length,
+                totalIncome: totalIncome,
+                totalDebt: totalDebt,
+                activePackages: packages.filter(p => p.status === 'active').length
+            };
+            
+            return stats;
+        } catch (error) {
+            console.error('Stats hatası:', error);
+            return null;
+        }
     }
 
     // Tahmini boyut
@@ -405,5 +402,15 @@ class StorageManager {
     }
 }
 
-// Global instance
+// ✅ GLOBAL INSTANCE OLUŞTUR VE window.storage'A ATA
 const storageManager = new StorageManager();
+
+// ⚠️ ÖNEMLİ: window.storage'a ata (app.js'te bekleniyor)
+window.storage = storageManager;
+
+// Başlangıçta StorageManager'ı initialize et
+storageManager.init().catch(err => {
+    console.error('❌ StorageManager başlatılırken hata:', err);
+});
+
+console.log('✅ storage-manager.js yüklendi ve window.storage tanımlandı');

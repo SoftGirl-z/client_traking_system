@@ -206,102 +206,69 @@
         </div>
     </div>
 
-    <script>
-        function showTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            if (tab === 'login') {
-                document.querySelector('.tab-btn:first-child').classList.add('active');
-                document.getElementById('loginTab').classList.add('active');
-            } else {
-                document.querySelector('.tab-btn:last-child').classList.add('active');
-                document.getElementById('registerTab').classList.add('active');
-            }
+  <script type="module">
+    import * as fb from './firebase-config.js';
+
+    window.login = async function () {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+            alert('Lütfen e-posta ve şifre girin!');
+            return;
         }
 
-        async function login() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
-
-            if (!email || !password) {
-                alert('Lütfen e-posta ve şifre girin!');
-                return;
-            }
-
-            try {
-                const userKey = 'user-' + btoa(email);
-                const userData = await window.storage.get(userKey);
-                
-                if (userData) {
-                    const user = JSON.parse(userData.value);
-                    if (user.password === btoa(password)) {
-                        await window.storage.set('current-user', JSON.stringify(user));
-                        window.location.href = 'index.html';
-                    } else {
-                        alert('Şifre hatalı!');
-                    }
-                } else {
-                    alert('Kullanıcı bulunamadı! Lütfen kayıt olun.');
-                }
-            } catch (error) {
-                alert('Kullanıcı bulunamadı! Lütfen kayıt olun.');
-            }
-        }
-
-        async function register() {
-            const name = document.getElementById('registerName').value.trim();
-            const email = document.getElementById('registerEmail').value.trim();
-            const password = document.getElementById('registerPassword').value;
-            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
-
-            if (!name || !email || !password) {
-                alert('Lütfen tüm alanları doldurun!');
-                return;
-            }
-
-            if (password !== passwordConfirm) {
-                alert('Şifreler eşleşmiyor!');
-                return;
-            }
-
-            if (password.length < 6) {
-                alert('Şifre en az 6 karakter olmalıdır!');
-                return;
-            }
-
-            const userKey = 'user-' + btoa(email);
-            
-            try {
-                const existingUser = await window.storage.get(userKey);
-                if (existingUser) {
-                    alert('Bu e-posta adresi zaten kayıtlı!');
-                    return;
-                }
-            } catch (error) {
-                // User doesn't exist, continue
-            }
-
-            const newUser = {
-                name: name,
-                email: email,
-                password: btoa(password),
-                createdAt: new Date().toISOString()
-            };
-
-            try {
-                await window.storage.set(userKey, JSON.stringify(newUser));
-                await window.storage.set('current-user', JSON.stringify(newUser));
-                alert('Kayıt başarılı! Yönlendiriliyorsunuz...');
-                window.location.href = 'index.html';
-            } catch (error) {
-                alert('Kayıt sırasında hata oluştu!');
-            }
-        }
-
-        function guestLogin() {
+        try {
+            await fb.loginUser(email, password);
+            alert('✓ Giriş başarılı');
             window.location.href = 'index.html';
+        } catch (error) {
+            alert('❌ ' + error.message);
         }
-    </script>
+    }
+
+    window.register = async function () {
+        const name = document.getElementById('registerName').value.trim();
+        const email = document.getElementById('registerEmail').value.trim();
+        const password = document.getElementById('registerPassword').value;
+        const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+
+        if (!name || !email || !password) {
+            alert('Tüm alanlar zorunludur');
+            return;
+        }
+
+        if (password !== passwordConfirm) {
+            alert('Şifreler uyuşmuyor!');
+            return;
+        }
+
+        try {
+            await fb.registerUser(email, password, name);
+            alert('✓ Kayıt başarılı, yönlendiriliyorsunuz');
+            window.location.href = 'index.html';
+        } catch (error) {
+            alert('❌ ' + error.message);
+        }
+    }
+
+    window.guestLogin = function () {
+        window.location.href = 'index.html';
+    }
+
+    window.showTab = function (tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        if (tab === 'login') {
+            document.querySelector('.tab-btn:first-child').classList.add('active');
+            document.getElementById('loginTab').classList.add('active');
+        } else {
+            document.querySelector('.tab-btn:last-child').classList.add('active');
+            document.getElementById('registerTab').classList.add('active');
+        }
+    }
+</script>
+ 
 </body>
 </html>

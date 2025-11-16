@@ -1,22 +1,48 @@
+// ========================================
+// GLOBAL VARIABLES
+// ========================================
+
 let clients = [];
 let sessions = [];
 let packages = [];
 let payments = [];
-let currentClientId = null;
-let currentPackageId = null;
 let currentUser = null;
 let currentCalendarDate = new Date();
 
-// Sayfa yüklendiğinde
-window.onload = function() {
-    checkLoginStatus();
-    loadData();
-    document.getElementById('sessionDate').valueAsDate = new Date();
-    document.getElementById('packageStartDate').valueAsDate = new Date();
-    document.getElementById('paymentDate').valueAsDate = new Date();
-};
+// ========================================
+// INITIALIZE APP
+// ========================================
 
-// Login kontrolü
+window.addEventListener('load', async function() {
+    console.log('✅ Uygulama başlatılıyor...');
+    
+    // window.storage hazır mı kontrol et
+    if (!window.storage) {
+        console.error('❌ HATA: window.storage tanımlanmamış! storage-manager.js yüklenmiş mi?');
+        alert('⚠️ Hata: Storage sistemi hazırlanmıyor. Sayfayı yenile.');
+        return;
+    }
+    
+    console.log('✅ window.storage hazır');
+    
+    // Başlat
+    try {
+        await checkLoginStatus();
+        await loadData();
+        initializeForm();
+        renderClients();
+        updateStats();
+        console.log('✅ Uygulama tamamen başlatıldı');
+    } catch (error) {
+        console.error('❌ Başlatma hatası:', error);
+        alert('⚠️ Uygulama başlatılırken hata: ' + error.message);
+    }
+});
+
+// ========================================
+// LOGIN & AUTH
+// ========================================
+
 async function checkLoginStatus() {
     try {
         const userData = await window.storage.get('current-user');
@@ -25,37 +51,152 @@ async function checkLoginStatus() {
             document.getElementById('userDisplay').style.display = 'flex';
             document.getElementById('guestDisplay').style.display = 'none';
             document.getElementById('currentUserName').textContent = currentUser.name;
+            console.log('✅ Kullanıcı giriş yaptı:', currentUser.name);
         } else {
             document.getElementById('userDisplay').style.display = 'none';
             document.getElementById('guestDisplay').style.display = 'flex';
         }
     } catch (error) {
+        console.error('Login kontrol hatası:', error);
         document.getElementById('userDisplay').style.display = 'none';
         document.getElementById('guestDisplay').style.display = 'flex';
     }
 }
 
-// Çıkış yap
 async function logout() {
     if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
         try {
             await window.storage.delete('current-user');
             window.location.href = 'login.html';
         } catch (error) {
-            console.error('Çıkış hatası:', error);
+            alert('Çıkış hatası: ' + error.message);
         }
     }
 }
 
-// Tab değiştirme
+// ========================================
+// DATA MANAGEMENT
+// ========================================
+
+async function loadData() {
+    const userPrefix = currentUser ? ('user-' + currentUser.email) : 'guest';
+    
+    try {
+        const clientsData = await window.storage.get(userPrefix + '-clients');
+        const sessionsData = await window.storage.get(userPrefix + '-sessions');
+        const packagesData = await window.storage.get(userPrefix + '-packages');
+        const paymentsData = await window.storage.get(userPrefix + '-payments');
+        
+        clients = clientsData ? JSON.parse(clientsData.value) : [];
+        sessions = sessionsData ? JSON.parse(sessionsData.value) : [];
+        packages = packagesData ? JSON.parse(packagesData.value) : [];
+        payments = paymentsData ? JSON.parse(paymentsData.value) : [];
+        
+        console.log(`✅ Veri yüklendi: ${clients.length} danışan, ${sessions.length} seans`);
+    } catch (error) {
+        console.log('💡 İlk kullanım - veri yok:', error.message);
+        clients = [];
+        sessions = [];
+        packages = [];
+        payments = [];
+    }
+}
+
+async function saveData() {
+    const userPrefix = currentUser ? ('user-' + currentUser.email) : 'guest';
+    
+    try {
+        await window.storage.set(userPrefix + '-clients', JSON.stringify(clients));
+        await window.storage.set(userPrefix + '-sessions', JSON.stringify(sessions));
+        await window.storage.set(userPrefix + '-packages', JSON.stringify(packages));
+        await window.storage.set(userPrefix + '-payments', JSON.stringify(payments));
+        console.log('✅ Veri kaydedildi');
+    } catch (error) {
+        console.error('❌ Kayıt hatası:', error);
+        alert('Veri kaydedilirken hata: ' + error.message);
+    }
+}
+
+// ========================================
+// FORM INITIALIZATION
+// ========================================
+
+function initializeForm() {
+    // Select'leri doldur
+    updateClientSelects();
+    
+    // Tarih alanlarını bugüne ayarla
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('sessionDate').value = today;
+    document.getElementById('packageStartDate').value = today;
+    document.getElementById('paymentDate').value = today;
+}
+
+function updateClientSelects() {
+    const selects = ['sessionClient', 'packageClient', 'paymentClient'];
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">-- Danışan Seç --</option>';
+        
+        clients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client.id;
+            option.textContent = `${client.name} (${client.phone})`;
+            select.appendChild(option);
+        });
+        
+        if (currentValue) select.value = currentValue;
+    });
+}
+
+// ========================================
+// NOTIFICATION SYSTEM
+// ========================================
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span>${type === 'success' ? '✅' : '⚠️'} ${message}</span>
+    `;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#10b981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// ========================================
+// TAB SWITCHING
+// ========================================
+
 function switchTab(tab) {
+    // Tab'ları pasif yap
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     
+    // Tıklanan tab'ı aktif yap
     event.target.classList.add('active');
     
     if (tab === 'clients') {
         document.getElementById('clientsPage').classList.add('active');
+        renderClients();
     } else if (tab === 'calendar') {
         document.getElementById('calendarPage').classList.add('active');
         renderCalendar();
@@ -68,132 +209,17 @@ function switchTab(tab) {
     }
 }
 
-// Veri yükleme
-async function loadData() {
-    const userPrefix = currentUser ? ('user-' + currentUser.email) : 'guest';
-    
-    try {
-        const clientsData = await window.storage.get(userPrefix + '-clients');
-        const sessionsData = await window.storage.get(userPrefix + '-sessions');
-        const packagesData = await window.storage.get(userPrefix + '-packages');
-        const paymentsData = await window.storage.get(userPrefix + '-payments');
-        
-        if (clientsData) clients = JSON.parse(clientsData.value);
-        if (sessionsData) sessions = JSON.parse(sessionsData.value);
-        if (packagesData) packages = JSON.parse(packagesData.value);
-        if (paymentsData) payments = JSON.parse(paymentsData.value);
-        
-        renderClients();
-        updateStats();
-    } catch (error) {
-        console.log('İlk kullanım');
-        renderClients();
-        updateStats();
-    }
-}
-
-// Veri kaydetme
-async function saveData() {
-    const userPrefix = currentUser ? ('user-' + currentUser.email) : 'guest';
-    
-    try {
-        await window.storage.set(userPrefix + '-clients', JSON.stringify(clients));
-        await window.storage.set(userPrefix + '-sessions', JSON.stringify(sessions));
-        await window.storage.set(userPrefix + '-packages', JSON.stringify(packages));
-        await window.storage.set(userPrefix + '-payments', JSON.stringify(payments));
-    } catch (error) {
-        console.error('Kayıt hatası:', error);
-    }
-}
-// app.js'e ekle
-
-// Grafik ekleme (Chart.js kullanarak)
-function renderDashboardCharts() {
-    // Aylık gelir grafiği
-    const incomeChart = document.getElementById('incomeChart');
-    if (incomeChart) {
-        new Chart(incomeChart, {
-            type: 'line',
-            data: {
-                labels: getLast6Months(),
-                datasets: [{
-                    label: 'Gelir',
-                    data: getMonthlyIncomeData(),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-    }
-}
-
-// Bildirim sistemi
-function showNotification(message, type = 'success') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <span class="notification-icon">${type === 'success' ? '✓' : '⚠'}</span>
-            <span class="notification-message">${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Arama önerileri (autocomplete)
-function initializeAutocomplete() {
-    const searchInput = document.getElementById('searchInput');
-    const suggestions = document.createElement('div');
-    suggestions.className = 'autocomplete-suggestions';
-    searchInput.parentNode.appendChild(suggestions);
-    
-    searchInput.addEventListener('input', (e) => {
-        const value = e.target.value.toLowerCase();
-        if (value.length < 2) {
-            suggestions.innerHTML = '';
-            return;
-        }
-        
-        const matches = clients.filter(client => 
-            client.name.toLowerCase().includes(value) ||
-            client.phone.includes(value)
-        );
-        
-        suggestions.innerHTML = matches.slice(0, 5).map(client => `
-            <div class="suggestion-item" onclick="selectClient('${client.id}')">
-                <strong>${client.name}</strong>
-                <span>${client.phone}</span>
-            </div>
-        `).join('');
-    });
-}
-
-// === DANIŞAN FONKSİYONLARI ===
+// ========================================
+// CLIENT MANAGEMENT
+// ========================================
 
 function openAddClientModal() {
     document.getElementById('addClientModal').classList.add('active');
+    clearClientForm();
 }
 
 function closeAddClientModal() {
     document.getElementById('addClientModal').classList.remove('active');
-    clearClientForm();
 }
 
 function clearClientForm() {
@@ -204,31 +230,35 @@ function clearClientForm() {
     document.getElementById('clientNotes').value = '';
 }
 
-function saveClient() {
+async function saveClient() {
     const name = document.getElementById('clientName').value.trim();
     const phone = document.getElementById('clientPhone').value.trim();
+    const email = document.getElementById('clientEmail').value.trim();
+    const complaints = document.getElementById('clientComplaints').value.trim();
+    const notes = document.getElementById('clientNotes').value.trim();
 
     if (!name || !phone) {
-        alert('Ad Soyad ve Telefon zorunludur!');
+        alert('❌ Ad ve telefon zorunlu!');
         return;
     }
 
-    const newClient = {
-        id: Date.now().toString(),
+    const client = {
+        id: 'client-' + Date.now(),
         name: name,
         phone: phone,
-        email: document.getElementById('clientEmail').value.trim(),
-        complaints: document.getElementById('clientComplaints').value.trim(),
-        notes: document.getElementById('clientNotes').value.trim(),
+        email: email,
+        complaints: complaints,
+        notes: notes,
         createdAt: new Date().toISOString()
     };
 
-    clients.push(newClient);
-    saveData();
+    clients.push(client);
+    await saveData();
     renderClients();
     updateStats();
+    updateClientSelects();
     closeAddClientModal();
-    alert('Danışan başarıyla eklendi!');
+    showNotification('Danışan eklendi', 'success');
 }
 
 function deleteClient(clientId) {
@@ -241,373 +271,284 @@ function deleteClient(clientId) {
     saveData();
     renderClients();
     updateStats();
+    showNotification('Danışan silindi', 'success');
 }
 
-function clearFilters() {
-    document.getElementById('filterStatus').value = 'all';
-    document.getElementById('filterSessionType').value = 'all';
-    document.getElementById('filterPayment').value = 'all';
-    document.getElementById('searchInput').value = '';
-    renderClients();
-}
+// ========================================
+// SESSION MANAGEMENT
+// ========================================
 
-// === SEANS FONKSİYONLARI ===
-
-function openAddSessionModal(clientId = null) {
-    currentClientId = clientId;
-    const modal = document.getElementById('addSessionModal');
-    modal.classList.add('active');
+function openAddSessionModal() {
+    document.getElementById('addSessionModal').classList.add('active');
+    clearSessionForm();
     
-    const select = document.getElementById('sessionClient');
-    select.innerHTML = '<option value="">Seçiniz...</option>';
-    clients.forEach(client => {
-        const option = document.createElement('option');
-        option.value = client.id;
-        option.textContent = client.name;
-        if (clientId && client.id === clientId) {
-            option.selected = true;
-        }
-        select.appendChild(option);
-    });
-    
-    document.getElementById('sessionDate').valueAsDate = new Date();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('sessionDate').value = today;
+    document.getElementById('sessionTime').value = '09:00';
 }
 
 function closeAddSessionModal() {
     document.getElementById('addSessionModal').classList.remove('active');
-    clearSessionForm();
-    currentClientId = null;
 }
 
 function clearSessionForm() {
-    document.getElementById('sessionDate').valueAsDate = new Date();
+    document.getElementById('sessionClient').value = '';
+    document.getElementById('sessionDate').value = '';
     document.getElementById('sessionTime').value = '09:00';
     document.getElementById('sessionType').value = 'Fizyoterapi';
+    document.getElementById('sessionDuration').value = '60';
     document.getElementById('sessionNotes').value = '';
 }
 
-function saveSession() {
-    const clientId = document.getElementById('sessionClient').value || currentClientId;
-    
-    if (!clientId) {
-        alert('Lütfen bir danışan seçin!');
-        return;
-    }
-
+async function saveSession() {
+    const clientId = document.getElementById('sessionClient').value;
     const date = document.getElementById('sessionDate').value;
     const time = document.getElementById('sessionTime').value;
+    const type = document.getElementById('sessionType').value;
+    const duration = parseInt(document.getElementById('sessionDuration').value) || 60;
+    const notes = document.getElementById('sessionNotes').value.trim();
 
-    if (!date || !time) {
-        alert('Tarih ve saat zorunludur!');
+    if (!clientId || !date || !time || !type) {
+        alert('❌ Zorunlu alanları doldurun!');
         return;
     }
 
-    const newSession = {
-        id: Date.now().toString(),
+    const session = {
+        id: 'session-' + Date.now(),
         clientId: clientId,
         date: date,
         time: time,
-        type: document.getElementById('sessionType').value,
-        notes: document.getElementById('sessionNotes').value.trim(),
+        type: type,
+        duration: duration,
+        notes: notes,
         createdAt: new Date().toISOString()
     };
 
-    sessions.push(newSession);
+    sessions.push(session);
     
-    // Paketten seans düş
-    const activePackage = packages.find(p => p.clientId === clientId && p.status === 'active');
-    if (activePackage && activePackage.remainingSessions > 0) {
-        activePackage.remainingSessions--;
-        if (activePackage.remainingSessions === 0) {
-            activePackage.status = 'completed';
+    // Paket seans sayısını azalt
+    const pkg = packages.find(p => p.clientId === clientId && p.status === 'active');
+    if (pkg && pkg.remainingSessions > 0) {
+        pkg.remainingSessions -= 1;
+        if (pkg.remainingSessions === 0) {
+            pkg.status = 'completed';
         }
     }
-    
-    saveData();
+
+    await saveData();
     renderClients();
+    renderCalendar();
     updateStats();
     closeAddSessionModal();
-    alert('Seans başarıyla eklendi!');
+    showNotification('Seans eklendi', 'success');
 }
 
 function deleteSession(sessionId) {
-    if (!confirm('Bu seansı silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Seanı silmek istediğinizden emin misiniz?')) return;
     
     sessions = sessions.filter(s => s.id !== sessionId);
     saveData();
     renderClients();
+    renderCalendar();
     updateStats();
+    showNotification('Seans silindi', 'success');
 }
 
-// === PAKET FONKSİYONLARI ===
+// ========================================
+// PACKAGE MANAGEMENT
+// ========================================
 
 function openAddPackageModal(clientId = null) {
-    const modal = document.getElementById('addPackageModal');
-    modal.classList.add('active');
+    document.getElementById('addPackageModal').classList.add('active');
+    clearPackageForm();
     
-    const select = document.getElementById('packageClient');
-    select.innerHTML = '<option value="">Seçiniz...</option>';
-    clients.forEach(client => {
-        const option = document.createElement('option');
-        option.value = client.id;
-        option.textContent = client.name;
-        if (clientId && client.id === clientId) {
-            option.selected = true;
-        }
-        select.appendChild(option);
-    });
+    if (clientId) {
+        document.getElementById('packageClient').value = clientId;
+    }
     
-    document.getElementById('packageStartDate').valueAsDate = new Date();
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('packageStartDate').value = today;
 }
 
 function closeAddPackageModal() {
     document.getElementById('addPackageModal').classList.remove('active');
+}
+
+function clearPackageForm() {
+    document.getElementById('packageClient').value = '';
     document.getElementById('packageName').value = '';
     document.getElementById('packageSessions').value = '10';
     document.getElementById('packagePrice').value = '';
     document.getElementById('packagePaid').value = '0';
+    document.getElementById('packageStartDate').value = '';
 }
 
-function savePackage() {
+async function savePackage() {
     const clientId = document.getElementById('packageClient').value;
     const name = document.getElementById('packageName').value.trim();
     const totalSessions = parseInt(document.getElementById('packageSessions').value);
     const price = parseFloat(document.getElementById('packagePrice').value);
-    const paidAmount = parseFloat(document.getElementById('packagePaid').value) || 0;
+    const paid = parseFloat(document.getElementById('packagePaid').value) || 0;
+    const startDate = document.getElementById('packageStartDate').value;
 
     if (!clientId || !name || !totalSessions || !price) {
-        alert('Lütfen zorunlu alanları doldurun!');
+        alert('❌ Zorunlu alanları doldurun!');
         return;
     }
 
-    const newPackage = {
-        id: Date.now().toString(),
+    if (paid > price) {
+        alert('❌ Ödenen tutar toplam fiyatı geçemez!');
+        return;
+    }
+
+    const pkg = {
+        id: 'package-' + Date.now(),
         clientId: clientId,
         name: name,
         totalSessions: totalSessions,
         remainingSessions: totalSessions,
         price: price,
-        paidAmount: paidAmount,
-        startDate: document.getElementById('packageStartDate').value,
+        paidAmount: paid,
+        startDate: startDate,
         status: 'active',
         createdAt: new Date().toISOString()
     };
 
-    packages.push(newPackage);
-
-    if (paidAmount > 0) {
-        const payment = {
-            id: Date.now().toString(),
-            packageId: newPackage.id,
-            clientId: clientId,
-            amount: paidAmount,
-            date: newPackage.startDate,
-            method: 'Nakit',
-            note: 'İlk ödeme',
-            createdAt: new Date().toISOString()
-        };
-        payments.push(payment);
-    }
-
-    saveData();
-    closeAddPackageModal();
-    renderClients();
+    packages.push(pkg);
+    await saveData();
     renderPackages();
+    renderClients();
     updateStats();
-    alert('Paket başarıyla eklendi!');
+    closeAddPackageModal();
+    showNotification('Paket eklendi', 'success');
 }
 
 function deletePackage(packageId) {
-    if (!confirm('Bu paketi silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Paketi silmek istediğinizden emin misiniz?')) return;
     
     packages = packages.filter(p => p.id !== packageId);
-    payments = payments.filter(p => p.packageId !== packageId);
     saveData();
     renderPackages();
     updateStats();
+    showNotification('Paket silindi', 'success');
 }
 
-// === ÖDEME FONKSİYONLARI ===
+// ========================================
+// PAYMENT MANAGEMENT
+// ========================================
 
 function openPaymentModal(packageId) {
-    currentPackageId = packageId;
     const pkg = packages.find(p => p.id === packageId);
-    if (!pkg) return;
-
     const client = clients.find(c => c.id === pkg.clientId);
-    const remaining = pkg.price - pkg.paidAmount;
 
+    if (!pkg || !client) return;
+
+    const remaining = pkg.price - pkg.paidAmount;
+    
     document.getElementById('paymentPackageInfo').innerHTML = `
-        <strong>Danışan:</strong> ${client.name}<br>
-        <strong>Paket:</strong> ${pkg.name}<br>
-        <strong>Toplam:</strong> ${pkg.price.toFixed(2)} ₺<br>
-        <strong>Ödenen:</strong> ${pkg.paidAmount.toFixed(2)} ₺<br>
-        <strong>Kalan:</strong> <span style="color: #ef4444; font-weight: bold;">${remaining.toFixed(2)} ₺</span>
+        <strong>${client.name}</strong><br>
+        <strong>${pkg.name}</strong><br>
+        <strong>Kalan Tutar:</strong> ${remaining.toFixed(2)} ₺
     `;
 
-    document.getElementById('paymentAmount').value = remaining.toFixed(2);
-    document.getElementById('paymentDate').valueAsDate = new Date();
+    document.getElementById('paymentAmount').value = remaining;
+    document.getElementById('paymentPackage').value = packageId;
+    document.getElementById('paymentClient').value = pkg.clientId;
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('paymentDate').value = today;
+
     document.getElementById('paymentModal').classList.add('active');
 }
 
 function closePaymentModal() {
     document.getElementById('paymentModal').classList.remove('active');
-    currentPackageId = null;
 }
 
-function savePayment() {
+async function savePayment() {
+    const packageId = document.getElementById('paymentPackage').value;
     const amount = parseFloat(document.getElementById('paymentAmount').value);
-    
-    if (!amount || amount <= 0) {
-        alert('Geçerli bir tutar girin!');
+    const date = document.getElementById('paymentDate').value;
+    const method = document.getElementById('paymentMethod').value;
+
+    if (!packageId || !amount || !date) {
+        alert('❌ Zorunlu alanları doldurun!');
         return;
     }
 
-    const pkg = packages.find(p => p.id === currentPackageId);
-    if (!pkg) return;
+    if (amount <= 0) {
+        alert('❌ Tutar 0\'dan büyük olmalıdır!');
+        return;
+    }
 
+    const pkg = packages.find(p => p.id === packageId);
+    
     const payment = {
-        id: Date.now().toString(),
-        packageId: currentPackageId,
+        id: 'payment-' + Date.now(),
+        packageId: packageId,
         clientId: pkg.clientId,
         amount: amount,
-        date: document.getElementById('paymentDate').value,
-        method: document.getElementById('paymentMethod').value,
+        date: date,
+        method: method,
         createdAt: new Date().toISOString()
     };
 
     payments.push(payment);
     pkg.paidAmount += amount;
 
-    saveData();
-    closePaymentModal();
-    renderFinance();
+    await saveData();
     renderPackages();
-    alert('Ödeme kaydedildi!');
+    renderFinance();
+    renderClients();
+    closePaymentModal();
+    showNotification('Ödeme kaydedildi', 'success');
 }
 
-// === RENDER FONKSİYONLARI ===
+// ========================================
+// RENDERING FUNCTIONS
+// ========================================
 
 function renderClients() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('filterStatus').value;
-    const typeFilter = document.getElementById('filterSessionType').value;
-    const paymentFilter = document.getElementById('filterPayment').value;
-
-    let filteredClients = clients.filter(client => {
-        const matchesSearch = client.name.toLowerCase().includes(searchTerm) ||
-                            client.phone.includes(searchTerm);
-        if (!matchesSearch) return false;
-
-        if (statusFilter !== 'all') {
-            const hasActivePackage = packages.some(p => p.clientId === client.id && p.status === 'active');
-            if (statusFilter === 'active' && !hasActivePackage) return false;
-            if (statusFilter === 'inactive' && hasActivePackage) return false;
-        }
-
-        if (typeFilter !== 'all') {
-            const hasSessionType = sessions.some(s => s.clientId === client.id && s.type === typeFilter);
-            if (!hasSessionType) return false;
-        }
-
-        if (paymentFilter !== 'all') {
-            const clientPackages = packages.filter(p => p.clientId === client.id);
-            const totalDebt = clientPackages.reduce((sum, p) => sum + (p.price - p.paidAmount), 0);
-            if (paymentFilter === 'paid' && totalDebt > 0) return false;
-            if (paymentFilter === 'debt' && totalDebt <= 0) return false;
-        }
-
-        return true;
-    });
-
     const container = document.getElementById('clientsList');
-    document.getElementById('clientCount').textContent = filteredClients.length;
+    const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
 
-    if (filteredClients.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">👤</div>
-                <p>Henüz danışan eklenmemiş</p>
-            </div>
-        `;
+    let filtered = clients;
+    if (search) {
+        filtered = filtered.filter(c => 
+            c.name.toLowerCase().includes(search) || c.phone.includes(search)
+        );
+    }
+
+    document.getElementById('clientCount').textContent = filtered.length;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Danışan bulunamadı</div>';
         return;
     }
 
-    container.innerHTML = filteredClients.map(client => {
-        const clientSessions = sessions
-            .filter(s => s.clientId === client.id)
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+    container.innerHTML = filtered.map(client => {
+        const clientSessions = sessions.filter(s => s.clientId === client.id);
         const clientPackages = packages.filter(p => p.clientId === client.id);
-        const activePackage = clientPackages.find(p => p.status === 'active');
-        const totalDebt = clientPackages.reduce((sum, p) => sum + (p.price - p.paidAmount), 0);
+        const totalSpent = clientPackages.reduce((sum, p) => sum + p.price, 0);
 
         return `
             <div class="client-card">
                 <div class="client-header">
-                    <div class="client-info">
-                        <h3>
-                            ${client.name}
-                            <span class="badge">${clientSessions.length} seans</span>
-                            ${activePackage ? `
-                                <span class="package-badge package-active">
-                                    ${activePackage.remainingSessions}/${activePackage.totalSessions} kaldı
-                                </span>
-                            ` : ''}
-                            ${totalDebt > 0 ? `
-                                <span class="payment-status payment-debt">
-                                    💳 ${totalDebt.toFixed(2)} ₺ borç
-                                </span>
-                            ` : clientPackages.length > 0 ? `
-                                <span class="payment-status payment-paid">
-                                    ✓ Ödemesi tamam
-                                </span>
-                            ` : ''}
-                        </h3>
-                        <div class="client-details">
-                            <div>📱 ${client.phone}</div>
-                            ${client.email ? `<div>📧 ${client.email}</div>` : ''}
-                            ${client.complaints ? `<div style="color: #ef4444;">⚠️ ${client.complaints}</div>` : ''}
-                        </div>
+                    <div>
+                        <h3>${client.name}</h3>
+                        <p>📱 ${client.phone}</p>
+                        ${client.email ? `<p>📧 ${client.email}</p>` : ''}
                     </div>
-                    <div class="btn-group">
-                        <button class="btn btn-success btn-small" onclick="openAddSessionModal('${client.id}')">
-                            ➕ Seans
-                        </button>
-                        <button class="btn btn-primary btn-small" onclick="openAddPackageModal('${client.id}')">
-                            📦 Paket
-                        </button>
-                        <button class="btn btn-danger btn-small" onclick="deleteClient('${client.id}')">
-                            🗑️
-                        </button>
+                    <div style="text-align: right; font-size: 12px; color: #666;">
+                        📊 ${clientSessions.length} seans | 📦 ${clientPackages.length} paket | 💳 ${totalSpent.toFixed(2)} ₺
                     </div>
                 </div>
-                
-                ${clientSessions.length > 0 ? `
-                    <div class="sessions-list">
-                        <strong style="color: #333; display: block; margin-bottom: 10px;">
-                            Son Seanslar:
-                        </strong>
-                        ${clientSessions.slice(0, 5).map(session => `
-                            <div class="session-card">
-                                <div class="session-info">
-                                    <span class="session-type">${session.type}</span>
-                                    <span style="margin-left: 10px; color: #666;">
-                                        ${new Date(session.date).toLocaleDateString('tr-TR')} • ${session.time}
-                                    </span>
-                                    ${session.notes ? `
-                                        <div style="color: #666; margin-top: 5px; font-size: 13px;">
-                                            💬 ${session.notes}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                <button class="btn btn-danger btn-small" onclick="deleteSession('${session.id}')">
-                                    🗑️
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                ` : ''}
+                ${client.complaints ? `<p style="color: #666; font-size: 13px;"><strong>Şikayetler:</strong> ${client.complaints}</p>` : ''}
+                ${client.notes ? `<p style="color: #666; font-size: 13px;"><strong>Notlar:</strong> ${client.notes}</p>` : ''}
+                <div style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-success btn-small" onclick="openAddPackageModal('${client.id}')">📦 Paket Ekle</button>
+                    <button class="btn btn-danger btn-small" onclick="deleteClient('${client.id}')">🗑️ Sil</button>
+                </div>
             </div>
         `;
     }).join('');
@@ -619,6 +560,7 @@ function renderCalendar() {
     
     const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
                        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    
     document.getElementById('calendarMonth').textContent = `${monthNames[month]} ${year}`;
 
     const firstDay = new Date(year, month, 1);
@@ -663,17 +605,8 @@ function renderCalendar() {
             if (client) {
                 const eventDiv = document.createElement('div');
                 eventDiv.className = 'calendar-event';
-                
-                if (session.type.includes('Fizyoterapi')) {
-                    eventDiv.classList.add('physio');
-                } else if (session.type.includes('Pilates')) {
-                    eventDiv.classList.add('pilates');
-                } else if (session.type.includes('Yoga')) {
-                    eventDiv.classList.add('yoga');
-                }
-                
                 eventDiv.textContent = `${session.time} ${client.name.split(' ')[0]}`;
-                eventDiv.title = `${client.name} - ${session.type}`;
+                eventDiv.title = `${client.name} - ${session.type} (${session.duration} dk)`;
                 dayDiv.appendChild(eventDiv);
             }
         });
@@ -702,50 +635,31 @@ function renderPackages() {
     const container = document.getElementById('packagesList');
     
     if (clients.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><p>Henüz paket yok</p></div>';
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Paket yok</div>';
         return;
     }
 
     container.innerHTML = clients.map(client => {
         const clientPackages = packages.filter(p => p.clientId === client.id);
-        
         if (clientPackages.length === 0) return '';
         
         return `
             <div class="client-card">
-                <h3 style="margin-bottom: 15px;">${client.name}</h3>
+                <h3>${client.name}</h3>
                 ${clientPackages.map(pkg => {
                     const used = pkg.totalSessions - pkg.remainingSessions;
                     const progress = (used / pkg.totalSessions) * 100;
                     const remaining = pkg.price - pkg.paidAmount;
                     
                     return `
-                        <div class="package-card">
-                            <div class="package-header">
-                                <div>
-                                    <strong>${pkg.name}</strong>
-                                    <span class="badge">${pkg.status === 'active' ? 'Aktif' : 'Tamamlandı'}</span>
-                                </div>
-                                ${remaining > 0 ? `
-                                    <button class="btn btn-success btn-small" onclick="openPaymentModal('${pkg.id}')">
-                                        💰 Ödeme Al
-                                    </button>
-                                ` : ''}
-                            </div>
-                            <div style="font-size: 14px; color: #666; margin: 10px 0;">
-                                📊 Kullanılan: ${used}/${pkg.totalSessions} seans
-                            </div>
-                            <div class="package-progress">
-                                <div class="package-progress-bar ${progress > 80 ? 'danger' : progress > 50 ? 'warning' : ''}" 
-                                     style="width: ${progress}%"></div>
-                            </div>
-                            <div style="font-size: 14px; color: #666; margin-top: 10px;">
-                                💳 Ödenen: ${pkg.paidAmount.toFixed(2)} / ${pkg.price.toFixed(2)} ₺
-                                ${remaining > 0 ? 
-                                    `<span style="color: #ef4444; font-weight: 600;"> (Kalan: ${remaining.toFixed(2)} ₺)</span>` : 
-                                    `<span style="color: #10b981; font-weight: 600;"> ✓ Tamamlandı</span>`
-                                }
-                            </div>
+                        <div style="border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                            <strong>${pkg.name}</strong> <span style="color: #10b981;">${pkg.status === 'active' ? '✓ Aktif' : 'Tamamlandı'}</span><br>
+                            📊 Kullanılan: ${used}/${pkg.totalSessions} seans<br>
+                            💳 Ödenen: ${pkg.paidAmount.toFixed(2)} / ${pkg.price.toFixed(2)} ₺
+                            ${remaining > 0 ? `<span style="color: #ef4444;"> (Kalan: ${remaining.toFixed(2)} ₺)</span>` : ''}
+                            <br>
+                            ${remaining > 0 ? `<button class="btn btn-success btn-small" onclick="openPaymentModal('${pkg.id}')">💰 Ödeme Al</button>` : ''}
+                            <button class="btn btn-danger btn-small" onclick="deletePackage('${pkg.id}')">🗑️ Sil</button>
                         </div>
                     `;
                 }).join('')}
@@ -756,13 +670,12 @@ function renderPackages() {
 
 function renderFinance() {
     const now = new Date();
-    const thisMonthPayments = payments.filter(p => {
+    const thisMonth = payments.filter(p => {
         const paymentDate = new Date(p.date);
-        return paymentDate.getMonth() === now.getMonth() && 
-               paymentDate.getFullYear() === now.getFullYear();
+        return paymentDate.getMonth() === now.getMonth() && paymentDate.getFullYear() === now.getFullYear();
     });
 
-    const monthlyIncome = thisMonthPayments.reduce((sum, p) => sum + p.amount, 0);
+    const monthlyIncome = thisMonth.reduce((sum, p) => sum + p.amount, 0);
     const totalIncome = payments.reduce((sum, p) => sum + p.amount, 0);
     const totalDebt = packages.reduce((sum, p) => sum + (p.price - p.paidAmount), 0);
 
@@ -771,29 +684,25 @@ function renderFinance() {
     document.getElementById('totalDebt').textContent = totalDebt.toFixed(2) + ' ₺';
 
     const container = document.getElementById('paymentHistory');
-    const recentPayments = payments.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
+    const recent = payments.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
 
-    if (recentPayments.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>Henüz ödeme yok</p></div>';
+    if (recent.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Ödeme yok</div>';
         return;
     }
 
-    container.innerHTML = recentPayments.map(payment => {
+    container.innerHTML = recent.map(payment => {
         const client = clients.find(c => c.id === payment.clientId);
         const pkg = packages.find(p => p.id === payment.packageId);
         
         return `
-            <div style="padding: 15px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between;">
                 <div>
-                    <strong>${client ? client.name : 'Bilinmeyen'}</strong>
-                    <div style="font-size: 12px; color: #666;">
-                        ${new Date(payment.date).toLocaleDateString('tr-TR')} • ${payment.method}
-                    </div>
-                    ${pkg ? `<div style="font-size: 12px; color: #666;">${pkg.name}</div>` : ''}
+                    <strong>${client ? client.name : 'Bilinmeyen'}</strong><br>
+                    ${new Date(payment.date).toLocaleDateString('tr-TR')} • ${payment.method}<br>
+                    ${pkg ? `<small>${pkg.name}</small>` : ''}
                 </div>
-                <div style="text-align: right;">
-                    <strong style="color: #10b981; font-size: 18px;">+${payment.amount.toFixed(2)} ₺</strong>
-                </div>
+                <strong style="color: #10b981;">+${payment.amount.toFixed(2)} ₺</strong>
             </div>
         `;
     }).join('');
@@ -807,16 +716,25 @@ function updateStats() {
     const now = new Date();
     const thisMonth = sessions.filter(s => {
         const sessionDate = new Date(s.date);
-        return sessionDate.getMonth() === now.getMonth() && 
-               sessionDate.getFullYear() === now.getFullYear();
+        return sessionDate.getMonth() === now.getMonth() && sessionDate.getFullYear() === now.getFullYear();
     }).length;
     
     document.getElementById('thisMonthSessions').textContent = thisMonth;
 }
 
-// Modal dışına tıklandığında kapatma
+// ========================================
+// UTILITIES
+// ========================================
+
+function clearFilters() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+    renderClients();
+}
+
+// Modal dışına tıklandığında kapat
 window.onclick = function(event) {
-    const modals = ['addClientModal', 'addSessionModal', 'addPackageModal', 'paymentModal']; 
+    const modals = ['addClientModal', 'addSessionModal', 'addPackageModal', 'paymentModal'];
     modals.forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (event.target === modal) {
@@ -824,3 +742,37 @@ window.onclick = function(event) {
         }
     });
 }
+
+console.log('✅ app.js yüklendi ve hazır');
+// ================================
+// GLOBAL'E AÇILAN FONKSİYONLAR
+// ================================
+window.switchTab = switchTab;
+
+window.openAddClientModal = openAddClientModal;
+window.closeAddClientModal = closeAddClientModal;
+
+window.openAddSessionModal = openAddSessionModal;
+window.closeAddSessionModal = closeAddSessionModal;
+
+window.openAddPackageModal = openAddPackageModal;
+window.closeAddPackageModal = closeAddPackageModal;
+
+window.openPaymentModal = openPaymentModal;
+window.closePaymentModal = closePaymentModal;
+
+window.saveClient = saveClient;
+window.saveSession = saveSession;
+window.savePackage = savePackage;
+window.savePayment = savePayment;
+
+window.deleteClient = deleteClient;
+window.deleteSession = deleteSession;
+window.deletePackage = deletePackage;
+
+window.previousMonth = previousMonth;
+window.nextMonth = nextMonth;
+window.goToToday = goToToday;
+
+window.clearFilters = clearFilters;
+window.logout = logout;
