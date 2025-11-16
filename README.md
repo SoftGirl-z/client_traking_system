@@ -160,7 +160,10 @@ Mobil uygulama (Capacitor ile)
 
 📸 Ekran Görüntüleri
 
-(İstersen bana görüntüleri gönder, README içine yerleştirilmiş şekilde geri vereyim.)
+<img width="1121" height="690" alt="image" src="https://github.com/user-attachments/assets/68a97219-f4c7-4ad9-9339-16744820d9be" />
+
+<img width="525" height="781" alt="image" src="https://github.com/user-attachments/assets/ca517391-5c85-4842-8ace-94a73ea76d3c" />
+
 
 ❤️ Katkı
 
