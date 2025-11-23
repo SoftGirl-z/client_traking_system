@@ -153,6 +153,54 @@ body.dark-mode .stat-card {
     width: 60%;
     margin-bottom: 12px;
 }
+.badge-active {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.badge-frozen {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+}
+
+.client-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 16px;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+.client-summary-label {
+    color: #6b7280;
+}
+
+.client-summary-value {
+    font-weight: 600;
+    color: #111827;
+}
+
+.client-summary-value.debt {
+    color: #b91c1c;
+}
+
+.client-last-message {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #374151;
+}
+
+body.dark-mode .client-summary-label {
+    color: #9ca3af;
+}
+
+body.dark-mode .client-summary-value {
+    color: #f9fafb;
+}
+
+body.dark-mode .client-last-message {
+    color: #e5e7eb;
+}
 
 /* Notification System */
 .notification {
@@ -1467,4 +1515,63 @@ body.dark-mode .empty-state p {
         box-shadow: none;
         border: 1px solid #e5e7eb;
     }
+    .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.75);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+.modal.active {
+    display: flex;
+}
+.modal-content {
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 16px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(15,23,42,0.4);
+}
+.modal-content.large {
+    max-width: 900px;
+}
+.modal .close {
+    float: right;
+    font-size: 24px;
+    cursor: pointer;
+}
+.finance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 14px;
+}
+.finance-table th,
+.finance-table td {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+}
+.finance-table th {
+    background: #f9fafb;
+    font-weight: 600;
+}
+
+body.dark-mode .modal-content {
+    background: #020617;
+    color: #e5e7eb;
+}
+body.dark-mode .finance-table th {
+    background: #020617;
+}
+body.dark-mode .finance-table td,
+body.dark-mode .finance-table th {
+    border-color: #1f2937;
+}
+
 }

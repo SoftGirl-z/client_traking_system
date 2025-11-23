@@ -16,16 +16,14 @@ let currentCalendarDate = new Date();
 window.addEventListener('load', async function() {
     console.log('✅ Uygulama başlatılıyor...');
     
-    // window.storage hazır mı kontrol et
     if (!window.storage) {
-        console.error('❌ HATA: window.storage tanımlanmamış! storage-manager.js yüklenmiş mi?');
-        alert('⚠️ Hata: Storage sistemi hazırlanmıyor. Sayfayı yenile.');
+        console.error('❌ HATA: window.storage tanımlanmamış!');
+        alert('⚠️ Hata: Storage sistemi yüklenemedi.');
         return;
     }
     
     console.log('✅ window.storage hazır');
     
-    // Başlat
     try {
         await checkLoginStatus();
         await loadData();
@@ -51,13 +49,11 @@ async function checkLoginStatus() {
             document.getElementById('userDisplay').style.display = 'flex';
             document.getElementById('guestDisplay').style.display = 'none';
             document.getElementById('currentUserName').textContent = currentUser.name;
-            console.log('✅ Kullanıcı giriş yaptı:', currentUser.name);
         } else {
             document.getElementById('userDisplay').style.display = 'none';
             document.getElementById('guestDisplay').style.display = 'flex';
         }
     } catch (error) {
-        console.error('Login kontrol hatası:', error);
         document.getElementById('userDisplay').style.display = 'none';
         document.getElementById('guestDisplay').style.display = 'flex';
     }
@@ -92,9 +88,8 @@ async function loadData() {
         packages = packagesData ? JSON.parse(packagesData.value) : [];
         payments = paymentsData ? JSON.parse(paymentsData.value) : [];
         
-        console.log(`✅ Veri yüklendi: ${clients.length} danışan, ${sessions.length} seans`);
+        console.log(`✅ Veri yüklendi`);
     } catch (error) {
-        console.log('💡 İlk kullanım - veri yok:', error.message);
         clients = [];
         sessions = [];
         packages = [];
@@ -110,9 +105,7 @@ async function saveData() {
         await window.storage.set(userPrefix + '-sessions', JSON.stringify(sessions));
         await window.storage.set(userPrefix + '-packages', JSON.stringify(packages));
         await window.storage.set(userPrefix + '-payments', JSON.stringify(payments));
-        console.log('✅ Veri kaydedildi');
     } catch (error) {
-        console.error('❌ Kayıt hatası:', error);
         alert('Veri kaydedilirken hata: ' + error.message);
     }
 }
@@ -122,14 +115,15 @@ async function saveData() {
 // ========================================
 
 function initializeForm() {
-    // Select'leri doldur
     updateClientSelects();
-    
-    // Tarih alanlarını bugüne ayarla
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('sessionDate').value = today;
-    document.getElementById('packageStartDate').value = today;
-    document.getElementById('paymentDate').value = today;
+
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    const localDate = today.toISOString().split('T')[0];
+
+    document.getElementById('sessionDate').value = localDate;
+    document.getElementById('packageStartDate').value = localDate;
+    document.getElementById('paymentDate').value = localDate;
 }
 
 function updateClientSelects() {
@@ -187,11 +181,9 @@ function showNotification(message, type = 'success') {
 // ========================================
 
 function switchTab(tab) {
-    // Tab'ları pasif yap
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     
-    // Tıklanan tab'ı aktif yap
     event.target.classList.add('active');
     
     if (tab === 'clients') {
@@ -243,14 +235,18 @@ async function saveClient() {
     }
 
     const client = {
-        id: 'client-' + Date.now(),
-        name: name,
-        phone: phone,
-        email: email,
-        complaints: complaints,
-        notes: notes,
-        createdAt: new Date().toISOString()
-    };
+    id: 'client-' + Date.now(),
+    name,
+    phone,
+    email,
+    complaints,
+    notes,
+    createdAt: new Date().toISOString(),
+    status: 'active',        // aktif / dondurulmuş
+    messages: [],            // danışan notları / mesajları
+    totalSessions: 0         // toplam seans sayısı
+};
+
 
     clients.push(client);
     await saveData();
@@ -260,19 +256,51 @@ async function saveClient() {
     closeAddClientModal();
     showNotification('Danışan eklendi', 'success');
 }
+function addClientMessage(clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
 
+    const text = prompt("Danışan için not ekleyin:");
+    if (!text || !text.trim()) return;
+
+    const message = {
+        id: "msg-" + Date.now(),
+        text: text.trim(),
+        date: new Date().toLocaleString("tr-TR")
+    };
+
+    if (!client.messages) client.messages = [];
+    client.messages.push(message);
+
+    saveData();
+    renderClients();
+    showNotification("Not eklendi", "success");
+}
+function toggleClientStatus(clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    client.status = client.status === "frozen" ? "active" : "frozen";
+
+    saveData();
+    renderClients();
+    showNotification("Danışan durumu güncellendi", "success");
+}
 function deleteClient(clientId) {
-    if (!confirm('Bu danışanı silmek istediğinizden emin misiniz?')) return;
-    
+    if (!confirm("Bu danışanı silmek istediğinizden emin misiniz?")) return;
+
     clients = clients.filter(c => c.id !== clientId);
     sessions = sessions.filter(s => s.clientId !== clientId);
     packages = packages.filter(p => p.clientId !== clientId);
-    
+    payments = payments.filter(pay => pay.clientId !== clientId);
+
     saveData();
     renderClients();
+    renderCalendar();
     updateStats();
-    showNotification('Danışan silindi', 'success');
+    showNotification("Danışan silindi", "success");
 }
+
 
 // ========================================
 // SESSION MANAGEMENT
@@ -282,8 +310,10 @@ function openAddSessionModal() {
     document.getElementById('addSessionModal').classList.add('active');
     clearSessionForm();
     
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('sessionDate').value = today;
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    document.getElementById('sessionDate').value = d.toISOString().split('T')[0];
+
     document.getElementById('sessionTime').value = '09:00';
 }
 
@@ -315,24 +345,22 @@ async function saveSession() {
 
     const session = {
         id: 'session-' + Date.now(),
-        clientId: clientId,
-        date: date,
-        time: time,
-        type: type,
-        duration: duration,
-        notes: notes,
-        createdAt: new Date().toISOString()
+        clientId,
+        date,
+        time,
+        type,
+        duration,
+        notes,
+        createdAt: Date.now()
     };
 
     sessions.push(session);
-    
-    // Paket seans sayısını azalt
+
+    // Paket seans azaltma
     const pkg = packages.find(p => p.clientId === clientId && p.status === 'active');
     if (pkg && pkg.remainingSessions > 0) {
-        pkg.remainingSessions -= 1;
-        if (pkg.remainingSessions === 0) {
-            pkg.status = 'completed';
-        }
+        pkg.remainingSessions--;
+        if (pkg.remainingSessions === 0) pkg.status = 'completed';
     }
 
     await saveData();
@@ -343,19 +371,8 @@ async function saveSession() {
     showNotification('Seans eklendi', 'success');
 }
 
-function deleteSession(sessionId) {
-    if (!confirm('Seanı silmek istediğinizden emin misiniz?')) return;
-    
-    sessions = sessions.filter(s => s.id !== sessionId);
-    saveData();
-    renderClients();
-    renderCalendar();
-    updateStats();
-    showNotification('Seans silindi', 'success');
-}
-
 // ========================================
-// PACKAGE MANAGEMENT
+// PACKAGE MANAGEMENT (TARİH KAYMA DÜZELTİLDİ)
 // ========================================
 
 function openAddPackageModal(clientId = null) {
@@ -366,8 +383,9 @@ function openAddPackageModal(clientId = null) {
         document.getElementById('packageClient').value = clientId;
     }
     
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('packageStartDate').value = today;
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    document.getElementById('packageStartDate').value = d.toISOString().split('T')[0];
 }
 
 function closeAddPackageModal() {
@@ -396,22 +414,17 @@ async function savePackage() {
         return;
     }
 
-    if (paid > price) {
-        alert('❌ Ödenen tutar toplam fiyatı geçemez!');
-        return;
-    }
-
     const pkg = {
         id: 'package-' + Date.now(),
-        clientId: clientId,
-        name: name,
-        totalSessions: totalSessions,
+        clientId,
+        name,
+        totalSessions,
         remainingSessions: totalSessions,
-        price: price,
+        price,
         paidAmount: paid,
-        startDate: startDate,
+        startDate,
         status: 'active',
-        createdAt: new Date().toISOString()
+        createdAt: Date.now()
     };
 
     packages.push(pkg);
@@ -423,18 +436,8 @@ async function savePackage() {
     showNotification('Paket eklendi', 'success');
 }
 
-function deletePackage(packageId) {
-    if (!confirm('Paketi silmek istediğinizden emin misiniz?')) return;
-    
-    packages = packages.filter(p => p.id !== packageId);
-    saveData();
-    renderPackages();
-    updateStats();
-    showNotification('Paket silindi', 'success');
-}
-
 // ========================================
-// PAYMENT MANAGEMENT
+// PAYMENT MANAGEMENT (TARİH KAYMA DÜZELTİLDİ)
 // ========================================
 
 function openPaymentModal(packageId) {
@@ -455,8 +458,9 @@ function openPaymentModal(packageId) {
     document.getElementById('paymentPackage').value = packageId;
     document.getElementById('paymentClient').value = pkg.clientId;
 
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('paymentDate').value = today;
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    document.getElementById('paymentDate').value = d.toISOString().split('T')[0];
 
     document.getElementById('paymentModal').classList.add('active');
 }
@@ -476,25 +480,26 @@ async function savePayment() {
         return;
     }
 
-    if (amount <= 0) {
-        alert('❌ Tutar 0\'dan büyük olmalıdır!');
-        return;
-    }
-
     const pkg = packages.find(p => p.id === packageId);
-    
+
     const payment = {
         id: 'payment-' + Date.now(),
-        packageId: packageId,
+        packageId,
         clientId: pkg.clientId,
-        amount: amount,
-        date: date,
-        method: method,
-        createdAt: new Date().toISOString()
+        amount,
+        date,
+        method,
+        createdAt: Date.now()
     };
 
     payments.push(payment);
     pkg.paidAmount += amount;
+
+     const client = clients.find(c => c.id === pkg.clientId);
+    if (client) {
+        const currentPaid = client.totalPaid || 0;
+        client.totalPaid = currentPaid + amount;
+    }
 
     await saveData();
     renderPackages();
@@ -505,7 +510,7 @@ async function savePayment() {
 }
 
 // ========================================
-// RENDERING FUNCTIONS
+// RENDERING (Aynı)
 // ========================================
 
 function renderClients() {
@@ -514,7 +519,7 @@ function renderClients() {
 
     let filtered = clients;
     if (search) {
-        filtered = filtered.filter(c => 
+        filtered = filtered.filter(c =>
             c.name.toLowerCase().includes(search) || c.phone.includes(search)
         );
     }
@@ -522,36 +527,190 @@ function renderClients() {
     document.getElementById('clientCount').textContent = filtered.length;
 
     if (filtered.length === 0) {
-        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Danışan bulunamadı</div>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <div style="font-size: 60px; margin-bottom: 20px;">👤</div>
+                <p>Henüz danışan eklenmemiş</p>
+            </div>
+        `;
         return;
     }
 
     container.innerHTML = filtered.map(client => {
-        const clientSessions = sessions.filter(s => s.clientId === client.id);
+        // Eski kayıtlarda eksikse default ver
+        const status = client.status || 'active';
+        const messages = client.messages || [];
+
+        const clientSessions = sessions
+            .filter(s => s.clientId === client.id)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
         const clientPackages = packages.filter(p => p.clientId === client.id);
-        const totalSpent = clientPackages.reduce((sum, p) => sum + p.price, 0);
+        const activePackage = clientPackages.find(p => p.status === 'active');
+        const clientPayments = payments.filter(p => p.clientId === client.id);
+
+        const totalPackageValue = clientPackages.reduce((sum, p) => sum + p.price, 0);
+        const totalPaid = (client.totalPaid != null
+            ? client.totalPaid
+            : clientPayments.reduce((sum, p) => sum + p.amount, 0)
+        );
+        const totalDebt = totalPackageValue - totalPaid;
+
+        const createdAtStr = client.createdAt
+            ? new Date(client.createdAt).toLocaleDateString('tr-TR')
+            : '-';
+
+        const lastSessionDate = clientSessions.length
+            ? new Date(clientSessions[0].date).toLocaleDateString('tr-TR')
+            : '-';
+
+        const lastMessage = messages.length ? messages[messages.length - 1] : null;
+
+        const statusLabel = status === 'frozen' ? 'Donduruldu' : 'Aktif';
+        const statusClass = status === 'frozen' ? 'badge badge-frozen' : 'badge badge-active';
 
         return `
             <div class="client-card">
                 <div class="client-header">
-                    <div>
-                        <h3>${client.name}</h3>
-                        <p>📱 ${client.phone}</p>
-                        ${client.email ? `<p>📧 ${client.email}</p>` : ''}
+                    <div class="client-info">
+                        <h3 onclick="openClientDetail('${client.id}')" style="cursor:pointer;">
+    ${client.name}
+    <span class="${statusClass}">${statusLabel}</span>
+</h3>
+
+                        <div class="client-details">
+                            <div>📱 ${client.phone}</div>
+                            ${client.email ? `<div>📧 ${client.email}</div>` : ''}
+                        </div>
                     </div>
                     <div style="text-align: right; font-size: 12px; color: #666;">
-                        📊 ${clientSessions.length} seans | 📦 ${clientPackages.length} paket | 💳 ${totalSpent.toFixed(2)} ₺
+                        <div>📅 Kayıt: ${createdAtStr}</div>
+                        <div>🧭 Son seans: ${lastSessionDate}</div>
+                        <div>📊 Toplam seans: ${clientSessions.length}</div>
                     </div>
                 </div>
-                ${client.complaints ? `<p style="color: #666; font-size: 13px;"><strong>Şikayetler:</strong> ${client.complaints}</p>` : ''}
-                ${client.notes ? `<p style="color: #666; font-size: 13px;"><strong>Notlar:</strong> ${client.notes}</p>` : ''}
-                <div style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
-                    <button class="btn btn-success btn-small" onclick="openAddPackageModal('${client.id}')">📦 Paket Ekle</button>
-                    <button class="btn btn-danger btn-small" onclick="deleteClient('${client.id}')">🗑️ Sil</button>
+
+                <div class="client-summary-grid">
+                    <div>
+                        <div class="client-summary-label">Toplam Paket Tutarı</div>
+                        <div class="client-summary-value">${totalPackageValue.toFixed(2)} ₺</div>
+                    </div>
+                    <div>
+                        <div class="client-summary-label">Toplam Ödenen</div>
+                        <div class="client-summary-value">${totalPaid.toFixed(2)} ₺</div>
+                    </div>
+                    <div>
+                        <div class="client-summary-label">Kalan Borç</div>
+                        <div class="client-summary-value ${totalDebt > 0 ? 'debt' : ''}">
+                            ${totalDebt.toFixed(2)} ₺
+                        </div>
+                    </div>
+                    <div>
+                        <div class="client-summary-label">Aktif Paket</div>
+                        <div class="client-summary-value">
+                            ${clientPackages.some(p => p.status === 'active') ? 'Var' : 'Yok'}
+                        </div>
+                    </div>
+                    <div>
+                    <div class="client-summary-label">Kullandığı Paket</div>
+                        <div class="client-summary-value">
+                           ${activePackage ? activePackage.name + " (" + activePackage.remainingSessions + " seans kaldı)" : "Yok"}
+                        </div>
+                    </div>
+                </div>
+
+                ${client.complaints
+                    ? `<p style="color: #666; font-size: 13px;"><strong>Şikayetler:</strong> ${client.complaints}</p>`
+                    : ''}
+                ${client.notes
+                    ? `<p style="color: #666; font-size: 13px;"><strong>Notlar:</strong> ${client.notes}</p>`
+                    : ''}
+                ${lastMessage
+                    ? `<p class="client-last-message"><strong>Son Not:</strong> ${lastMessage.text}</p>`
+                    : ''}
+
+                <div class="btn-group" style="margin-top: 15px;">
+                    <button class="btn btn-success btn-small" onclick="openAddSessionModal('${client.id}')">
+                        ➕ Seans
+                    </button>
+                    <button class="btn btn-small" onclick="openAddPackageModal('${client.id}')">
+                        📦 Paket
+                    </button>
+                    <button class="btn btn-small" onclick="addClientMessage('${client.id}')">
+                        💬 Not Ekle
+                    </button>
+                    <button class="btn btn-small" onclick="toggleClientStatus('${client.id}')">
+                        ${status === 'frozen' ? 'Aktifleştir' : 'Dondur'}
+                    </button>
+                    <button class="btn btn-danger btn-small" onclick="deleteClient('${client.id}')">
+                        🗑️ Sil
+                    </button>
                 </div>
             </div>
         `;
     }).join('');
+   
+
+function closeClientDetailModal() {
+    const modal = document.getElementById("clientDetailModal");
+    if (modal) modal.classList.remove("active");
+}
+
+}
+function openClientDetail(clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    const clientSessions = sessions
+        .filter(s => s.clientId === clientId)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const clientPackages = packages.filter(p => p.clientId === clientId);
+    const clientPayments = payments.filter(p => p.clientId === clientId);
+
+    let html = `
+        <p><strong>Telefon:</strong> ${client.phone}</p>
+        ${client.email ? `<p><strong>E-posta:</strong> ${client.email}</p>` : ''}
+        <p><strong>Kayıt Tarihi:</strong> ${
+            client.createdAt ? new Date(client.createdAt).toLocaleDateString('tr-TR') : '-'
+        }</p>
+
+        <h3>📦 Paketler</h3>
+        ${
+            clientPackages.length
+                ? `<ul>` + clientPackages.map(p => `
+                    <li>${p.name} - ${p.remainingSessions} / ${p.totalSessions} seans - ${p.price} ₺</li>
+                  `).join('') + `</ul>`
+                : `<p>Bu danışana kayıtlı paket yok.</p>`
+        }
+
+        <h3>📅 Seanslar</h3>
+        ${
+            clientSessions.length
+                ? `<ul>` + clientSessions.map(s => `
+                    <li>${s.date} ${s.time} - ${s.type} (${s.duration} dk)</li>
+                  `).join('') + `</ul>`
+                : `<p>Bu danışanın seansı yok.</p>`
+        }
+
+        <h3>💰 Ödemeler</h3>
+        ${
+            clientPayments.length
+                ? `<ul>` + clientPayments.map(pay => `
+                    <li>${pay.date} - ${pay.amount} ₺ (${pay.method || 'Belirtilmemiş'})</li>
+                  `).join('') + `</ul>`
+                : `<p>Bu danışana ait ödeme kaydı yok.</p>`
+        }
+    `;
+
+    const titleEl = document.getElementById("clientDetailTitle");
+    const bodyEl = document.getElementById("clientDetailBody");
+    const modal = document.getElementById("clientDetailModal");
+
+    if (!modal || !titleEl || !bodyEl) return;
+
+    titleEl.innerHTML = client.name;
+    bodyEl.innerHTML = html;
+    modal.classList.add("active");
 }
 
 function renderCalendar() {
@@ -597,7 +756,11 @@ function renderCalendar() {
         dayNumber.textContent = currentDate.getDate();
         dayDiv.appendChild(dayNumber);
 
-        const dateStr = currentDate.toISOString().split('T')[0];
+        const dateStr =
+    currentDate.getFullYear() + '-' +
+    String(currentDate.getMonth() + 1).padStart(2, '0') + '-' +
+    String(currentDate.getDate()).padStart(2, '0');
+
         const daySessions = sessions.filter(s => s.date === dateStr);
 
         daySessions.forEach(session => {
@@ -667,6 +830,156 @@ function renderPackages() {
         `;
     }).filter(html => html).join('');
 }
+function calculateMonthlyIncome() {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+
+    const monthlyPayments = payments.filter(pay => {
+        const d = new Date(pay.date);
+        return d.getMonth() === month && d.getFullYear() === year;
+    });
+
+    const total = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    return { total, list: monthlyPayments };
+}
+function openFinanceModal(title, content) {
+    const modal = document.getElementById("financeModal");
+    const titleEl = document.getElementById("financeModalTitle");
+    const bodyEl = document.getElementById("financeModalBody");
+
+    if (!modal || !titleEl || !bodyEl) return;
+
+    titleEl.innerHTML = title;
+    bodyEl.innerHTML = content;
+    modal.classList.add("active");
+}
+
+function closeFinanceModal() {
+    const modal = document.getElementById("financeModal");
+    if (modal) modal.classList.remove("active");
+}
+function openMonthlyIncome() {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+
+    const monthlyPayments = payments.filter(pay => {
+        const d = new Date(pay.date);
+        return d.getMonth() === month && d.getFullYear() === year;
+    });
+
+    const total = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    let html = `
+        <p><strong>Bu Ay Toplam:</strong> ${total.toFixed(2)} ₺</p>
+        <table class="finance-table">
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Danışan</th>
+                    <th>Tutar</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    monthlyPayments.forEach(p => {
+        const client = clients.find(c => c.id === p.clientId);
+        html += `
+            <tr>
+                <td>${p.date}</td>
+                <td>${client ? client.name : '-'}</td>
+                <td>${p.amount.toFixed(2)} ₺</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    openFinanceModal("📅 Bu Ayın Geliri", html);
+}
+function openTotalIncome() {
+    const total = payments.reduce((sum, p) => sum + p.amount, 0);
+
+    let html = `
+        <p><strong>Toplam Gelir:</strong> ${total.toFixed(2)} ₺</p>
+        <table class="finance-table">
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Danışan</th>
+                    <th>Tutar</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    payments.forEach(p => {
+        const client = clients.find(c => c.id === p.clientId);
+        html += `
+            <tr>
+                <td>${p.date}</td>
+                <td>${client ? client.name : '-'}</td>
+                <td>${p.amount.toFixed(2)} ₺</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    openFinanceModal("💰 Tüm Gelirler", html);
+}
+function openPendingPayments() {
+    const pending = packages
+        .map(p => ({
+            name: clients.find(c => c.id === p.clientId)?.name || '-',
+            pkg: p.name,
+            debt: (p.price || 0) - (p.paidAmount || 0)
+        }))
+        .filter(x => x.debt > 0);
+
+    if (pending.length === 0) {
+        openFinanceModal("⚠️ Bekleyen Ödemeler", "<p>Bekleyen ödeme yok.</p>");
+        return;
+    }
+
+    let html = `
+        <table class="finance-table">
+            <thead>
+                <tr>
+                    <th>Danışan</th>
+                    <th>Paket</th>
+                    <th>Kalan Borç</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    pending.forEach(p => {
+        html += `
+            <tr>
+                <td>${p.name}</td>
+                <td>${p.pkg}</td>
+                <td>${p.debt.toFixed(2)} ₺</td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    openFinanceModal("⚠️ Bekleyen Ödemeler", html);
+}
 
 function renderFinance() {
     const now = new Date();
@@ -705,6 +1018,7 @@ function renderFinance() {
                 <strong style="color: #10b981;">+${payment.amount.toFixed(2)} ₺</strong>
             </div>
         `;
+        
     }).join('');
 }
 
@@ -747,6 +1061,13 @@ console.log('✅ app.js yüklendi ve hazır');
 // ================================
 // GLOBAL'E AÇILAN FONKSİYONLAR
 // ================================
+window.logoutUser = function () {
+    if (confirm("Çıkış yapmak istiyor musunuz?")) {
+        localStorage.removeItem('current-user');
+        window.location.href = "login.html";
+    }
+}
+
 window.switchTab = switchTab;
 
 window.openAddClientModal = openAddClientModal;
@@ -776,3 +1097,16 @@ window.goToToday = goToToday;
 
 window.clearFilters = clearFilters;
 window.logout = logout;
+
+window.addClientMessage = addClientMessage;
+window.toggleClientStatus = toggleClientStatus;
+
+window.openMonthlyIncome = openMonthlyIncome;
+window.openTotalIncome = openTotalIncome;
+window.openPendingPayments = openPendingPayments;
+window.openFinanceModal = openFinanceModal;
+window.closeFinanceModal = closeFinanceModal;
+
+window.openClientDetail = openClientDetail;
+window.closeClientDetailModal = closeClientDetailModal;
+

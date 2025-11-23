@@ -21,7 +21,7 @@
                             <span>👤</span>
                             <span id="currentUserName"></span>
                         </div>
-                        <button class="btn btn-danger btn-small" onclick="logout()">Çıkış</button>
+                        <button class="btn btn-danger btn-small" onclick="logoutUser()">Çıkış</button>
                     </div>
                     <div id="guestDisplay">
                         <button class="btn btn-primary btn-small" onclick="window.location.href='login.html'">🔐 Giriş</button>
@@ -142,31 +142,32 @@
             </div>
         </div>
 
-        <!-- Finance Page -->
-        <div id="financePage" class="page">
-            <div class="finance-summary">
-                <div class="finance-card income">
-                    <h3>💰 Bu Ay Gelir</h3>
-                    <div class="amount" id="monthlyIncome">0 ₺</div>
-                </div>
-                <div class="finance-card">
-                    <h3>📊 Toplam Gelir</h3>
-                    <div class="amount" id="totalIncome">0 ₺</div>
-                </div>
-                <div class="finance-card debt">
-                    <h3>⚠️ Bekleyen Ödemeler</h3>
-                    <div class="amount" id="totalDebt">0 ₺</div>
-                </div>
-            </div>
-
-            <div class="clients-container">
-                <div class="clients-header">
-                    <h2>📋 Son Ödemeler</h2>
-                </div>
-                <div id="paymentHistory"></div>
-            </div>
-        </div>
+       <!-- Finance Page -->
+<div id="financePage" class="page">
+  <div class="finance-summary">
+    <div class="finance-card income" onclick="openMonthlyIncome()">
+      <h3>💰 Bu Ay Gelir</h3>
+      <div class="amount" id="monthlyIncome">0 ₺</div>
     </div>
+
+    <div class="finance-card" onclick="openTotalIncome()">
+      <h3>📊 Toplam Gelir</h3>
+      <div class="amount" id="totalIncome">0 ₺</div>
+    </div>
+
+    <div class="finance-card debt" onclick="openPendingPayments()">
+      <h3>⚠️ Bekleyen Ödemeler</h3>
+      <div class="amount" id="totalDebt">0 ₺</div>
+    </div>
+  </div>
+
+  <div class="clients-container">
+    <div class="clients-header">
+      <h2>💳 Son Ödemeler</h2>
+    </div>
+    <div id="paymentHistory"></div>
+  </div>
+</div>
 
     <!-- Modals -->
     <!-- Add Client Modal -->
@@ -295,6 +296,7 @@
                 <button class="btn btn-success" onclick="savePackage()">Kaydet</button>
                 <button class="btn btn-secondary" onclick="closeAddPackageModal()">İptal</button>
             </div>
+
         </div>
     </div>
 
@@ -336,6 +338,24 @@
             </div>
         </div>
     </div>
+<!-- Finance Modal -->
+<div id="financeModal" class="modal">
+  <div class="modal-content large">
+    <span class="close" onclick="closeFinanceModal()">&times;</span>
+    <h2 id="financeModalTitle"></h2>
+    <div id="financeModalBody"></div>
+  </div>
+</div>
+
+<!-- Client Detail Modal -->
+<div id="clientDetailModal" class="modal">
+  <div class="modal-content large">
+    <span class="close" onclick="closeClientDetailModal()">&times;</span>
+    <h2 id="clientDetailTitle"></h2>
+    <div id="clientDetailBody"></div>
+  </div>
+</div>
+
 
     <script type="module">
         import './storage-manager.js';
